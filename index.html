@@ -1,55 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat App</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <aside id="left">
-      <div class="brand">Chat App</div>
-      <div id="auth-section">
-        <input id="email" placeholder="Email" />
-        <input id="password" type="password" placeholder="Password" />
-        <button id="signupBtn">Sign Up</button>
-        <button id="loginBtn">Login</button>
-        <button id="logoutBtn" style="display:none">Logout</button>
-      </div>
 
-      <div id="profile" style="display:none">
-        <img id="profilePic" src="" alt="dp"/>
-        <input id="displayName" placeholder="Your name"/>
-        <input type="file" id="profileImageInput" accept="image/*"/>
-        <button id="saveProfileBtn">Save Profile</button>
-        <hr/>
-        <div id="contacts"></div>
-      </div>
-    </aside>
-
-    <main id="chat-area">
-      <header id="chatHeader">
-        <div id="chatWith">Select contact to chat</div>
-        <div id="statusLine"></div>
-        <div class="controls">
-          <button id="themeBtn">Theme</button>
-        </div>
-      </header>
-
-      <section id="messages" class="chat-box"></section>
-
-      <div id="composer">
-        <input type="file" id="attachFile" />
-        <input id="msgInput" placeholder="Type a message..." />
-        <button id="sendBtn">Send</button>
-        <button id="voiceBtn">🎤</button>
-      </div>
-      <div id="typingIndicator"></div>
-    </main>
+  <div class="auth-box" id="authBox">
+    <h2>🔐 Chat App Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button id="signupBtn">Sign Up</button>
+    <button id="loginBtn">Login</button>
   </div>
 
-  <audio id="notifySound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+  <div class="chat-container" id="chatContainer" style="display:none;">
+    <h2>💬 Chat App</h2>
+    <div id="statusText">Status: Offline</div>
+    <div id="chatBox" class="chat-box"></div>
+
+    <div class="input-container">
+      <input type="file" id="imageInput" accept="image/*">
+      <input type="text" id="messageInput" placeholder="Type message...">
+      <button id="sendBtn">Send</button>
+    </div>
+    <button id="logoutBtn">Logout</button>
+  </div>
 
   <script type="module" src="script.js"></script>
 </body>
