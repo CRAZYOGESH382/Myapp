@@ -1,4 +1,4 @@
-// ✅ Firebase App Configuration (browser-compatible)
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDS0qwZFuNE3fR7dDpTz_Sr7NrtqEgAorU",
   authDomain: "privetchatapp.firebaseapp.com",
@@ -10,64 +10,77 @@ const firebaseConfig = {
   measurementId: "G-J9SMFCJTCR"
 };
 
-// 🔗 Initialize Firebase
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
 
-// Elements
-const loginBox = document.getElementById("loginBox");
-const chatBox = document.getElementById("chatBox");
-const messagesDiv = document.getElementById("messages");
-const msgInput = document.getElementById("messageInput");
+const loginDiv = document.getElementById("loginDiv");
+const chatDiv = document.getElementById("chatDiv");
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const sendBtn = document.getElementById("sendBtn");
+const messageInput = document.getElementById("messageInput");
+const messageBox = document.getElementById("messages");
+let userName = "";
 
-// 🔐 Login or Signup Function
-function login() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+// Login / Signup
+loginBtn.addEventListener("click", async () => {
+  const name = document.getElementById("nameInput").value;
+  const email = document.getElementById("emailInput").value;
+  const password = document.getElementById("passwordInput").value;
 
-  firebase.auth().signInWithEmailAndPassword(email, password)
-    .then(() => loadChat())
-    .catch(() => {
-      firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then(() => loadChat());
-    });
-}
+  if (!email || !password || !name) {
+    alert("कृपया सभी फील्ड भरें!");
+    return;
+  }
 
-// 📤 Send Message
-function sendMessage() {
-  const message = msgInput.value.trim();
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    await userCredential.user.updateProfile({ displayName: name });
+    userName = name;
+  } catch (error) {
+    // अगर यूज़र पहले से है तो login करो
+    try {
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      userName = userCredential.user.displayName || name;
+    } catch (err) {
+      alert("Login Error: " + err.message);
+      return;
+    }
+  }
+
+  loginDiv.classList.add("hidden");
+  chatDiv.classList.remove("hidden");
+});
+
+// Send message
+sendBtn.addEventListener("click", () => {
+  const message = messageInput.value.trim();
   if (message === "") return;
 
-  const user = firebase.auth().currentUser;
   const timestamp = new Date().toLocaleTimeString();
-
-  firebase.database().ref("messages").push({
-    user: user.email,
+  db.ref("messages").push({
+    name: userName,
     text: message,
     time: timestamp
   });
-
-  msgInput.value = "";
-}
-
-// 📥 Real-time Message Listener
-firebase.database().ref("messages").on("child_added", (snapshot) => {
-  const msg = snapshot.val();
-  const msgDiv = document.createElement("div");
-  msgDiv.innerHTML = `<b>${msg.user}</b>: ${msg.text} <small>(${msg.time})</small>`;
-  messagesDiv.appendChild(msgDiv);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  messageInput.value = "";
 });
 
-// 🚪 Logout
-function logout() {
-  firebase.auth().signOut().then(() => {
-    chatBox.style.display = "none";
-    loginBox.style.display = "block";
-  });
-}
+// Show messages
+db.ref("messages").on("child_added", (snapshot) => {
+  const data = snapshot.val();
+  const msgDiv = document.createElement("div");
+  msgDiv.classList.add("message");
+  msgDiv.innerHTML = `<b>${data.name}</b>: ${data.text} <span>${data.time}</span>`;
+  messageBox.appendChild(msgDiv);
+  messageBox.scrollTop = messageBox.scrollHeight;
+});
 
-// ✅ After Login
-function loadChat() {
-  loginBox.style.display = "none";
-  chatBox.style.display = "block";
-}
+// Logout
+logoutBtn.addEventListener("click", () => {
+  auth.signOut();
+  chatDiv.classList.add("hidden");
+  loginDiv.classList.remove("hidden");
+});
