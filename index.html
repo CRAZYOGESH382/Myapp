@@ -3,52 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Private Chat - Neon Theme</title>
+  <title>Yogesh Chat - WhatsApp Style</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="chat-container">
     <aside class="sidebar">
-      <h2>Chats</h2>
-      <ul id="userList">
-        <!-- User list dynamically load hoga -->
-      </ul>
+      <header>
+        <h2>Yogesh Chat 💬</h2>
+      </header>
+      <div class="contacts" id="userList">
+        <p><b>Contacts</b></p>
+        <div class="user">Radhika ❤️</div>
+        <div class="user">Yogesh (You)</div>
+      </div>
     </aside>
 
     <main class="chat-area">
-      <header>
-        <div class="profile">
-          <img id="chatUserPhoto" src="https://via.placeholder.com/50" alt="User" />
+      <header class="chat-header">
+        <div class="chat-user-info">
+          <img src="https://i.pravatar.cc/50?img=12" alt="user" />
           <div>
-            <h3 id="chatUserName">Yogesh</h3>
-            <span class="status">Active Now</span>
+            <h3 id="chatUserName">Radhika ❤️</h3>
+            <span class="status">Online</span>
           </div>
         </div>
       </header>
 
       <div class="messages" id="messages"></div>
 
-      <footer>
+      <footer class="chat-input">
         <input type="text" id="messageInput" placeholder="Type a message..." />
-        <button id="sendBtn">➤</button>
+        <button id="sendBtn">Send</button>
       </footer>
     </main>
-
-    <aside class="info-panel">
-      <h3>Profile Info</h3>
-      <img src="https://via.placeholder.com/80" class="avatar" />
-      <p><b>Yogesh Patel</b></p>
-      <p class="status active">Online</p>
-
-      <h4>Attachments</h4>
-      <div class="attachments">
-        <div class="file">📎</div>
-        <div class="file">🎵</div>
-        <div class="file">📷</div>
-      </div>
-    </aside>
   </div>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
