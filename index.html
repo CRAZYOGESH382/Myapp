@@ -3,19 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yogesh Chat - WhatsApp Style</title>
+  <title>YogeshChat 💚</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="chat-wrapper">
     <header class="chat-header">
       <div class="user-info">
-        <img src="https://i.pravatar.cc/40?img=11" alt="User" />
+        <img id="profileImg" src="https://i.pravatar.cc/40?img=11" alt="User" />
         <div>
-          <h3 id="chatUserName">Radhika ❤️</h3>
-          <p class="status">Online</p>
+          <h3 id="chatAppName">YogeshChat 💚</h3>
+          <p id="status" class="status">Online</p>
         </div>
       </div>
+      <label class="upload-btn">
+        📷
+        <input type="file" id="uploadPhoto" accept="image/*" hidden />
+      </label>
     </header>
 
     <main id="messages" class="chat-body"></main>
