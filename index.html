@@ -7,36 +7,23 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="chat-container">
-    <aside class="sidebar">
-      <header>
-        <h2>Yogesh Chat 💬</h2>
-      </header>
-      <div class="contacts" id="userList">
-        <p><b>Contacts</b></p>
-        <div class="user">Radhika ❤️</div>
-        <div class="user">Yogesh (You)</div>
-      </div>
-    </aside>
-
-    <main class="chat-area">
-      <header class="chat-header">
-        <div class="chat-user-info">
-          <img src="https://i.pravatar.cc/50?img=12" alt="user" />
-          <div>
-            <h3 id="chatUserName">Radhika ❤️</h3>
-            <span class="status">Online</span>
-          </div>
+  <div class="chat-wrapper">
+    <header class="chat-header">
+      <div class="user-info">
+        <img src="https://i.pravatar.cc/40?img=11" alt="User" />
+        <div>
+          <h3 id="chatUserName">Radhika ❤️</h3>
+          <p class="status">Online</p>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <div class="messages" id="messages"></div>
+    <main id="messages" class="chat-body"></main>
 
-      <footer class="chat-input">
-        <input type="text" id="messageInput" placeholder="Type a message..." />
-        <button id="sendBtn">Send</button>
-      </footer>
-    </main>
+    <footer class="chat-footer">
+      <input type="text" id="messageInput" placeholder="Type a message..." />
+      <button id="sendBtn">➤</button>
+    </footer>
   </div>
 
   <script type="module" src="script.js"></script>
