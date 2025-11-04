@@ -1,302 +1,360 @@
-// script.js — Chat App Pro (many features)
-// Imports (modular)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+// script.js (module)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
-  getDatabase, ref, push, onChildAdded, set, onValue, remove, update
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, signOut, updateProfile
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
-  getAuth, signInAnonymously, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import {
-  getStorage, ref as sref, uploadString, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
+  getDatabase, ref, set, push, onChildAdded, onValue, serverTimestamp, onDisconnect, remove, update
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 
-// ---------- CONFIG ----------
+// ------------------- Firebase config -------------------
 const firebaseConfig = {
   apiKey: "AIzaSyDS0qwZFuNE3fR7dDpTz_Sr7NrtqEgAorU",
   authDomain: "privetchatapp.firebaseapp.com",
   databaseURL: "https://privetchatapp-default-rtdb.firebaseio.com",
   projectId: "privetchatapp",
-  storageBucket: "privetchatapp.firebasestorage.app",
-  messagingSenderId: "590135835173",
   appId: "1:590135835173:web:70d46a34d53af9b2f59dcc",
-  measurementId: "G-J9SMFCJTCR"
 };
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
 const auth = getAuth(app);
-const storage = getStorage(app);
+const db = getDatabase(app);
 
-// ---------- UI Refs ----------
-const myPhoto = document.getElementById('myPhoto');
-const displayNameInput = document.getElementById('displayName');
-const saveProfileBtn = document.getElementById('saveProfile');
-const userListEl = document.getElementById('userList');
-const messagesEl = document.getElementById('messages');
-const msgInput = document.getElementById('msgInput');
-const sendBtn = document.getElementById('btnSend') || document.getElementById('sendBtn');
-const typingText = document.getElementById('typingText');
-const chatNameEl = document.getElementById('chatName');
-const chatStatusEl = document.getElementById('chatStatus');
-const attachBtn = document.getElementById('btnAttach');
-const attachFileInput = document.getElementById('attachFile') || document.getElementById('fileUpload');
-const gifBtn = document.getElementById('btnGif');
-const voiceBtn = document.getElementById('btnVoice');
-const themeToggle = document.getElementById('themeToggle');
-const clearBtn = document.getElementById('btnClear');
-const exportBtn = document.getElementById('btnExport');
+// ------------------- UI Elements -------------------
+const emailEl = document.getElementById("email");
+const passEl = document.getElementById("password");
+const signupBtn = document.getElementById("signupBtn");
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const profileSection = document.getElementById("profile");
+const profilePic = document.getElementById("profilePic");
+const displayNameEl = document.getElementById("displayName");
+const profileImageInput = document.getElementById("profileImageInput");
+const saveProfileBtn = document.getElementById("saveProfileBtn");
+const contactsDiv = document.getElementById("contacts");
 
-// ---------- Local user state ----------
-let me = { uid: null, name: null, photo: null };
-let currentChat = { id: 'global', name: 'Public Chat' };
-chatNameEl.textContent = currentChat.name;
-let typingTimeout = null;
+const messagesEl = document.getElementById("messages");
+const msgInput = document.getElementById("msgInput");
+const sendBtn = document.getElementById("sendBtn");
+const attachFile = document.getElementById("attachFile");
+const voiceBtn = document.getElementById("voiceBtn");
+const typingIndicator = document.getElementById("typingIndicator");
+const chatWith = document.getElementById("chatWith");
+const statusLine = document.getElementById("statusLine");
+const notifySound = document.getElementById("notifySound");
+const themeBtn = document.getElementById("themeBtn");
 
-// ---------- AUTH (anonymous) so each browser has uid ----------
-signInAnonymously(auth).catch(e => console.warn('Auth failed', e));
+let currentUser = null;
+let currentChatRoom = null; // roomId string
+let contactsList = []; // cached users
+
+// ------------------- Auth Handlers -------------------
+signupBtn.onclick = async () => {
+  const email = emailEl.value.trim(), pass = passEl.value.trim();
+  if (!email || !pass) return alert("Email & password needed");
+  try {
+    const res = await createUserWithEmailAndPassword(auth, email, pass);
+    // create user record
+    await set(ref(db, `users/${res.user.uid}`), {
+      name: email.split("@")[0],
+      email: email,
+      createdAt: Date.now()
+    });
+  } catch (e) { alert(e.message); }
+};
+
+loginBtn.onclick = async () => {
+  const email = emailEl.value.trim(), pass = passEl.value.trim();
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) { alert(e.message); }
+};
+
+logoutBtn.onclick = () => signOut(auth);
+
+// ------------------- Presence & onAuth -------------------
 onAuthStateChanged(auth, user => {
-  if (!user) return;
-  me.uid = user.uid;
-  // load saved profile from localStorage
-  me.name = localStorage.getItem('chat_name') || `User${me.uid.slice(0,5)}`;
-  me.photo = localStorage.getItem('chat_photo') || myPhoto.src;
-  displayNameInput.value = me.name;
-  myPhoto.src = me.photo;
-  set(`/users/${me.uid}`, { uid: me.uid, name: me.name, photo: me.photo });
-  loadUsersList();
-  initListeners();
-});
-
-// ---------- Save profile ----------
-saveProfileBtn?.addEventListener('click', async () => {
-  me.name = displayNameInput.value || me.name;
-  localStorage.setItem('chat_name', me.name);
-  set(`/users/${me.uid}`, { uid: me.uid, name: me.name, photo: me.photo });
-  alert('Profile saved');
-  loadUsersList();
-});
-
-// ---------- Users list (simple) ----------
-async function loadUsersList(){
-  userListEl.innerHTML = '';
-  // fetch snapshot of /users
-  onValue(ref(db,'users'), snapshot => {
-    userListEl.innerHTML = '';
-    const users = snapshot.val() || {};
-    Object.values(users).forEach(u => {
-      const li = document.createElement('li');
-      li.innerHTML = `<span>${u.name || u.uid}</span><small style="display:block;color:#666">${u.uid===me.uid?'You':u.uid.slice(0,6)}</small>`;
-      li.addEventListener('click', () => openPrivateChat(u.uid, u.name, u.photo));
-      userListEl.appendChild(li);
-    });
-  }, {onlyOnce:false});
-}
-
-// ---------- Open private chat (room id deterministic) ----------
-function openPrivateChat(otherUid, otherName, otherPhoto){
-  // room id consistent: smaller+_+bigger
-  const members = [me.uid, otherUid].sort();
-  currentChat.id = `dm_${members[0]}_${members[1]}`;
-  currentChat.name = otherName || 'Chat';
-  chatNameEl.textContent = currentChat.name;
-  chatStatusEl.textContent = 'Online';
-  messagesEl.innerHTML = '';
-  listenMessages(currentChat.id);
-}
-
-// ---------- Listen public by default ----------
-function initListeners(){
-  listenMessages(currentChat.id);
-  listenStatus();
-}
-
-// ---------- Message schema
-// messages/{roomId}/{msgId} = {
-//   fromUid, fromName, text, time, type:'text|image|file|voice', delivered:{uid:true}, seen:{uid:true}, replyTo: msgId, edited:bool
-// }
-
-// ---------- Send message ----------
-sendBtn?.addEventListener('click', sendMessage);
-msgInput?.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
-
-function sendMessage(){
-  const text = (msgInput.value||'').trim();
-  if(!text) return;
-  const msg = {
-    fromUid: me.uid, fromName: me.name, text,
-    time: new Date().toLocaleTimeString(),
-    type: 'text', delivered:{}, seen:{}
-  };
-  push(ref(db, `messages/${currentChat.id}`), msg);
-  msgInput.value = '';
-  // update last message metadata
-  set(ref(db, `rooms/${currentChat.id}/meta`), { lastText: text, lastTime: Date.now()});
-  // send push via cloud function? (see server block below)
-}
-
-// ---------- Attach file (image/file) ----------
-attachBtn?.addEventListener('click', ()=> attachFileInput?.click());
-attachFileInput?.addEventListener('change', async (e)=>{
-  const f = e.target.files[0]; if(!f) return;
-  const reader = new FileReader();
-  reader.onload = async (ev)=>{
-    const base64 = ev.target.result;
-    // upload to storage
-    const path = `rooms/${currentChat.id}/${Date.now()}_${f.name}`;
-    const storageRef = sref(storage, path);
-    await uploadString(storageRef, base64, 'data_url');
-    const url = await getDownloadURL(storageRef);
-    push(ref(db, `messages/${currentChat.id}`), {
-      fromUid: me.uid, fromName: me.name, text: url, time: new Date().toLocaleTimeString(),
-      type: f.type.startsWith('image') ? 'image' : 'file', delivered:{}, seen:{}
-    });
-  };
-  reader.readAsDataURL(f);
-});
-
-// ---------- GIF button (GIPHY) ----------
-gifBtn?.addEventListener('click', async ()=>{
-  const q = prompt('Search GIF (term):');
-  if(!q) return;
-  // use GIPHY public beta key (for production use get your own key)
-  const key = 'dc6zaTOxFJmzC';
-  const res = await fetch(`https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(q)}&api_key=${key}&limit=6`);
-  const json = await res.json();
-  const url = json.data[0]?.images?.downsized_medium?.url;
-  if(url) {
-    push(ref(db, `messages/${currentChat.id}`), {
-      fromUid: me.uid, fromName: me.name, text: `<img src="${url}" style="max-width:240px"/>`,
-      time: new Date().toLocaleTimeString(), type:'gif', delivered:{}, seen:{}
-    });
-  } else alert('No GIF found');
-});
-
-// ---------- Typing indicator + online ----------
-msgInput?.addEventListener('input', ()=>{
-  set(ref(db, `presence/${currentChat.id}/${me.uid}`), {name: me.name, typing: true, last: Date.now()});
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(()=> {
-    set(ref(db, `presence/${currentChat.id}/${me.uid}`), {name: me.name, typing:false, last: Date.now()});
-  }, 1500);
-});
-
-// listen presence for current chat
-function listenStatus(){
-  onValue(ref(db, `presence/${currentChat.id}`), snap=>{
-    const val = snap.val() || {};
-    // show typing names (excluding me)
-    const typingUsers = Object.values(val).filter(u => u.typing && u.name !== me.name).map(u=>u.name);
-    typingText.textContent = typingUsers.length ? `${typingUsers.join(', ')} typing...` : '';
-  });
-}
-
-// ---------- Listen messages (and update delivered/seen) ----------
-function listenMessages(roomId){
-  messagesEl.innerHTML = '';
-  const msgsRef = ref(db, `messages/${roomId}`);
-  onChildAdded(msgsRef, snap=>{
-    const data = snap.val(); const key = snap.key;
-    showMessage(key, data);
-    // mark delivered
-    const deliveredPath = `messages/${roomId}/${key}/delivered/${me.uid}`;
-    set(ref(db, deliveredPath), Date.now());
-    // mark seen after small timeout when visible
-    setTimeout(()=> set(ref(db, `messages/${roomId}/${key}/seen/${me.uid}`), Date.now()), 1000);
-  });
-}
-
-// ---------- Render message ----------
-function showMessage(key, data){
-  const div = document.createElement('div');
-  div.className = 'message ' + (data.fromUid === me.uid ? 'me' : 'other');
-  // handle types
-  let inner = '';
-  if(data.type==='image') inner = `<img src="${data.text}" style="max-width:240px;border-radius:8px"/>`;
-  else if(data.type==='gif') inner = data.text;
-  else if(data.type==='file') inner = `<a href="${data.text}" target="_blank">Download file</a>`;
-  else if(data.type==='voice') inner = `<audio controls src="${data.text}"></audio>`;
-  else inner = escapeHtml(data.text);
-  // show edited marker, reactions etc
-  const meta = `<div class="meta">${data.fromName||'Anon'} • ${data.time} ${data.edited? '(edited)':''}</div>`;
-  div.innerHTML = inner + meta;
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-// ---------- Utility escape
-function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
-
-// ---------- Clear chat / export
-clearBtn?.addEventListener('click', ()=>{
-  if(confirm('Delete all messages in this chat?')){
-    remove(ref(db, `messages/${currentChat.id}`));
-    messagesEl.innerHTML = '';
+  if (user) {
+    currentUser = user;
+    document.getElementById("auth-section").style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    profileSection.style.display = "block";
+    loadProfile();
+    startPresence();
+    loadContacts();
+  } else {
+    currentUser = null;
+    document.getElementById("auth-section").style.display = "block";
+    logoutBtn.style.display = "none";
+    profileSection.style.display = "none";
+    messagesEl.innerHTML = "";
+    contactsDiv.innerHTML = "";
+    chatWith.innerText = "Select contact to chat";
   }
 });
-exportBtn?.addEventListener('click', async ()=>{
-  const snap = await (await fetch(`${firebaseConfig.databaseURL}/messages/${currentChat.id}.json`)).json();
-  const blob = new Blob([JSON.stringify(snap,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='chat_export.json'; a.click();
+
+// ------------------- Profile Save -------------------
+saveProfileBtn.onclick = async () => {
+  if (!currentUser) return;
+  const name = displayNameEl.value.trim() || currentUser.email.split("@")[0];
+  let base64 = null;
+  const f = profileImageInput.files[0];
+  if (f) {
+    base64 = await fileToBase64(f);
+  } else {
+    base64 = profilePic.src || null;
+  }
+  await update(ref(db, `users/${currentUser.uid}`), { name, photo: base64 });
+  alert("Profile saved");
+  loadContacts();
+};
+
+async function loadProfile() {
+  const snap = await (await fetch).catch(()=>null); // just to avoid lint
+  const uRef = ref(db, `users/${currentUser.uid}`);
+  onValue(uRef, s=>{
+    const data = s.val() || {};
+    profilePic.src = data.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name||currentUser.email.split("@")[0])}&background=0D8ABC&color=fff`;
+    displayNameEl.value = data.name || currentUser.email.split("@")[0];
+  });
+}
+
+// ------------------- Contacts (other users) -------------------
+function loadContacts() {
+  contactsDiv.innerHTML = "<small>Loading contacts...</small>";
+  const usersRef = ref(db, "users");
+  onValue(usersRef, snap=>{
+    const data = snap.val() || {};
+    contactsDiv.innerHTML = "";
+    contactsList = [];
+    Object.keys(data).forEach(uid=>{
+      if (uid === currentUser.uid) return;
+      const u = { uid, ...data[uid] };
+      contactsList.push(u);
+      const div = document.createElement("div");
+      div.className = "contact";
+      div.innerHTML = `<img src="${u.photo||`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=ccc&color=000`}" />
+        <div><div class="cname">${u.name||u.email}</div><div class="clast">${u.email||''}</div></div>`;
+      div.onclick = ()=> openChatWith(u);
+      contactsDiv.appendChild(div);
+    });
+  });
+}
+
+// ------------------- Chat Room utils -------------------
+function makeRoomId(a,b){
+  return a<b ? `${a}_${b}` : `${b}_${a}`;
+}
+
+function openChatWith(userObj){
+  currentChatRoom = makeRoomId(currentUser.uid, userObj.uid);
+  chatWith.innerText = `Chat with ${userObj.name||userObj.email}`;
+  messagesEl.innerHTML = "";
+  statusLine.innerText = "";
+  loadMessages(currentChatRoom);
+  watchTyping(currentChatRoom, userObj.uid);
+}
+
+// ------------------- Messages -------------------
+function loadMessages(roomId){
+  const roomRef = ref(db, `chats/${roomId}/messages`);
+  messagesEl.innerHTML = "";
+  onChildAdded(roomRef, snap=>{
+    const msg = snap.val();
+    appendMessage(msg, snap.key);
+    if (msg.senderUid !== currentUser.uid) notifySound.play();
+  });
+}
+
+function appendMessage(msg, key){
+  const div = document.createElement("div");
+  div.className = "msg " + (msg.senderUid===currentUser.uid ? "sent":"recv");
+  let inner = `<strong>${msg.senderName||msg.senderEmail||'User'}</strong><br/>`;
+  if (msg.text) inner += `${escapeHtml(msg.text)}<br/>`;
+  if (msg.image) inner += `<img src="${msg.image}" style="max-width:200px;border-radius:8px;margin-top:6px;display:block"/>`;
+  if (msg.file) inner += `<a href="${msg.file}" target="_blank">Download file</a><br/>`;
+  inner += `<small>${new Date(msg.time||Date.now()).toLocaleTimeString()} ${msg.edited? '(edited)':''}</small>`;
+
+  // owner controls
+  if (msg.senderUid === currentUser.uid){
+    inner += `<div style="margin-top:6px"><button data-action="delete" data-key="${key}">Delete</button>
+              <button data-action="edit" data-key="${key}">Edit</button></div>`;
+  }
+  div.innerHTML = inner;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  // attach events for delete/edit
+  div.querySelectorAll("button").forEach(b=>{
+    const action = b.dataset.action;
+    const key = b.dataset.key;
+    if (action==="delete") b.onclick = ()=> deleteMessage(currentChatRoom, key);
+    if (action==="edit") b.onclick = ()=> editMessagePrompt(currentChatRoom, key);
+  });
+}
+
+async function sendMessage({text=null,image=null,file=null}){
+  if (!currentChatRoom) return alert("Select contact first");
+  const messagesRef = ref(db, `chats/${currentChatRoom}/messages`);
+  const newRef = push(messagesRef);
+  const userRecordSnap = await (await fetch).catch(()=>null);
+  const nameSnap = ref(db, `users/${currentUser.uid}`);
+  // read name quickly (onValue used earlier so should be present)
+  onValue(nameSnap, snap=>{
+    const user = snap.val() || {};
+    set(newRef, {
+      senderUid: currentUser.uid,
+      senderName: user.name || currentUser.email.split("@")[0],
+      senderEmail: currentUser.email,
+      text: text || null,
+      image: image || null,
+      file: file || null,
+      time: Date.now(),
+      edited: false
+    });
+  }, {onlyOnce:true});
+}
+
+sendBtn.onclick = async ()=>{
+  const text = msgInput.value.trim();
+  if (!text && !attachFile.files[0]) return;
+  if (attachFile.files[0]){
+    const f = attachFile.files[0];
+    if (f.type.startsWith("image/")){
+      const b = await fileToBase64(f);
+      await sendMessage({image:b});
+    } else {
+      // other file: save base64 and provide link via data URL
+      const b = await fileToBase64(f);
+      await sendMessage({file:b});
+    }
+    attachFile.value = "";
+  } else {
+    await sendMessage({text});
+  }
+  msgInput.value = "";
+  setTyping(false);
+};
+
+// ------------------- Delete/Edit -------------------
+function deleteMessage(roomId, key){
+  if (!confirm("Delete message?")) return;
+  remove(ref(db, `chats/${roomId}/messages/${key}`));
+}
+
+async function editMessagePrompt(roomId,key){
+  const snap = await getOnce(`chats/${roomId}/messages/${key}`);
+  const text = snap && snap.text ? snap.text : "";
+  const newText = prompt("Edit message", text);
+  if (newText === null) return;
+  update(ref(db, `chats/${roomId}/messages/${key}`), { text: newText, edited: true, time: Date.now() });
+}
+
+// helper to get value once
+function getOnce(path){
+  return new Promise((res,rej)=>{
+    const r = ref(db, path);
+    onValue(r, s=>{ res(s.val()); }, {onlyOnce:true});
+  });
+}
+
+// ------------------- Typing Indicator -------------------
+let typingTimeout = null;
+msgInput.addEventListener("input", ()=> {
+  setTyping(true);
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(()=> setTyping(false), 1200);
 });
 
-// ---------- Voice recording (short) ----------
-voiceBtn?.addEventListener('click', async ()=>{
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    const mediaRecorder = new MediaRecorder(stream);
-    let chunks=[];
-    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+function setTyping(flag){
+  if (!currentChatRoom || !currentUser) return;
+  set(ref(db, `typing/${currentChatRoom}/${currentUser.uid}`), flag ? true : null);
+}
+
+function watchTyping(roomId, otherUid){
+  // reset
+  typingIndicator.innerText = "";
+  const tRef = ref(db, `typing/${roomId}`);
+  onValue(tRef, snap=>{
+    const val = snap.val() || {};
+    const keys = Object.keys(val);
+    const othersTyping = keys.filter(k=>k !== currentUser.uid);
+    typingIndicator.innerText = othersTyping.length ? "Typing..." : "";
+  });
+}
+
+// ------------------- Presence (online/offline) -------------------
+function startPresence(){
+  const pRef = ref(db, `presence/${currentUser.uid}`);
+  set(pRef, { online: true, lastSeen: Date.now() });
+  onDisconnect(pRef).set({ online:false, lastSeen: Date.now() });
+}
+
+// ------------------- Voice Recording -------------------
+let mediaRecorder = null, audioChunks = [];
+voiceBtn.onclick = async ()=>{
+  if (!mediaRecorder){
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
     mediaRecorder.onstop = async ()=>{
-      const blob = new Blob(chunks,{type:'audio/webm'});
-      // upload to storage
-      const reader = new FileReader();
-      reader.onload = async (ev)=>{
-        const base64 = ev.target.result;
-        const path = `rooms/${currentChat.id}/voice_${Date.now()}.webm`;
-        const storageRef = sref(storage, path);
-        await uploadString(storageRef, base64, 'data_url');
-        const url = await getDownloadURL(storageRef);
-        push(ref(db, `messages/${currentChat.id}`), { fromUid:me.uid, fromName:me.name, text: url, time: new Date().toLocaleTimeString(), type:'voice' });
-      };
-      reader.readAsDataURL(blob);
+      const blob = new Blob(audioChunks, {type:'audio/webm'});
+      audioChunks = [];
+      const base64 = await blobToBase64(blob);
+      await sendMessage({file: base64});
     };
     mediaRecorder.start();
-    voiceBtn.textContent='⏺️';
-    setTimeout(()=> { mediaRecorder.stop(); voiceBtn.textContent='🎙️'; }, 5000); // 5s record
-  } catch(err){ alert('Mic access denied'); }
-});
+    voiceBtn.innerText = "Stop";
+  } else {
+    mediaRecorder.stop();
+    mediaRecorder = null;
+    voiceBtn.innerText = "🎤";
+  }
+};
 
-// ---------- Message edit/delete/reply UI (simplified) ----------
-// For brevity: user can long-press message (not implemented here). In production attach listeners to edit/delete icons per message.
-
-// ---------- Simple client-side encryption example (AES-GCM) ----------
-async function encryptMessage(plain, keyStr){
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', enc.encode(keyStr.slice(0,32)), {name:'AES-GCM'}, false, ['encrypt']);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(plain));
-  // return iv + ct as base64
-  const arr = new Uint8Array(iv.byteLength + ct.byteLength);
-  arr.set(iv,0); arr.set(new Uint8Array(ct), iv.byteLength);
-  return btoa(String.fromCharCode(...arr));
+// ------------------- Helpers -------------------
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const reader = new FileReader();
+    reader.onload = e => res(e.target.result);
+    reader.onerror = e => rej(e);
+    reader.readAsDataURL(file);
+  });
 }
-async function decryptMessage(b64, keyStr){
-  const data = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-  const iv = data.slice(0,12);
-  const ct = data.slice(12);
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(keyStr.slice(0,32)), {name:'AES-GCM'}, false, ['decrypt']);
-  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
-  return new TextDecoder().decode(plain);
+function blobToBase64(blob){
+  return new Promise(r=>{
+    const reader = new FileReader();
+    reader.onload = e => r(e.target.result);
+    reader.readAsDataURL(blob);
+  });
 }
-// Usage: choose a shared secret per DM (not implemented automatic key exchange here).
+function escapeHtml(str){
+  return (str||"").replace(/[&<>"']/g, s=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[s]));
+}
 
-// ---------- Push Notifications (browser) overview ----------
-// For push notifications you need:
-// 1) FCM server key + Cloud Function to call FCM with token
-// 2) Client obtains FCM token (use firebase-messaging), register service worker
-// Example server call (Node):
-// fetch('https://fcm.googleapis.com/fcm/send', {method:'POST', headers:{'Authorization':'key=SERVER_KEY','Content-Type':'application/json'},body: JSON.stringify({to: clientToken, notification:{title:'New message', body:'...' }})})
-// I can give full FCM client/server code on request.
+// ------------------- small util for onValue once in old style -------------------
+function onValueOnce(refPath){ return new Promise(res=>{ onValue(ref(db, refPath), s=>res(s.val()), {onlyOnce:true}); }); }
 
-// ---------- END of script.js ----------
+// ------------------- small helper used above (get once) fallback to onValue) ---------------
+function onValue(refObj, cb, opts){ // wrapper to accept path string used earlier
+  // note: we imported onValue from firebase; using it directly:
+  return import("https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js").then(mod=>{
+    return mod.onValue(typeof refObj === "string" ? ref(db, refObj) : refObj, cb, opts);
+  });
+}
+
+// ------------------- Simple notifications when new contact logs online -------------------
+// theme toggle (simple)
+themeBtn.onclick = ()=> {
+  document.body.classList.toggle("dark");
+  if (document.body.classList.contains("dark")){
+    document.documentElement.style.setProperty("--panel","#222");
+    document.documentElement.style.setProperty("--bg1","#0f1724");
+  } else {
+    document.documentElement.style.removeProperty("--panel");
+    document.documentElement.style.removeProperty("--bg1");
+  }
+};
+
+// ------------------- Open chat with contact from outside (used earlier) -------------------
+window.openChatWith = openChatWith;
