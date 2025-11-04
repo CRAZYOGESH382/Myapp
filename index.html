@@ -3,22 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privet Chat App</title>
+  <title>Private Chat App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>नमस्ते Yogesh 👋</h1>
-  <p>ये तुम्हारा पहला Firebase + GitHub App है 🚀</p>
+  <div id="loginBox" class="box">
+    <h2>🔐 Login / Signup</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login / Signup</button>
+  </div>
 
-  <button onclick="sayHi()">Click Me</button>
+  <div id="chatBox" class="box" style="display: none;">
+    <h2>💬 Private Chat</h2>
+    <div id="messages" class="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="logout()">Logout</button>
+  </div>
 
-  <!-- ✅ Firebase SDKs -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
-  <!-- ✅ तुम्हारा Script File -->
   <script src="script.js"></script>
 </body>
 </html>
