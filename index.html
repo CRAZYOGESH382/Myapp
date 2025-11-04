@@ -3,67 +3,54 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chat App — Pro</title>
+  <title>Chat App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app">
-    <aside class="left-panel">
-      <div class="profile-area">
-        <img id="myPhoto" src="https://i.pravatar.cc/80" alt="profile" />
-        <div>
-          <input id="displayName" placeholder="Your name" />
-          <button id="saveProfile">Save</button>
-        </div>
+  <div id="app">
+    <aside id="left">
+      <div class="brand">Chat App</div>
+      <div id="auth-section">
+        <input id="email" placeholder="Email" />
+        <input id="password" type="password" placeholder="Password" />
+        <button id="signupBtn">Sign Up</button>
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn" style="display:none">Logout</button>
       </div>
 
-      <div class="contacts">
-        <div class="contacts-header">
-          <input id="searchUser" placeholder="Search users or add phone/email" />
-          <button id="createGroupBtn">+ Group</button>
-        </div>
-        <ul id="userList"></ul>
+      <div id="profile" style="display:none">
+        <img id="profilePic" src="" alt="dp"/>
+        <input id="displayName" placeholder="Your name"/>
+        <input type="file" id="profileImageInput" accept="image/*"/>
+        <button id="saveProfileBtn">Save Profile</button>
+        <hr/>
+        <div id="contacts"></div>
       </div>
     </aside>
 
-    <main class="chat-panel">
-      <header class="chat-header">
-        <div class="chat-title">
-          <img id="chatPhoto" src="https://i.pravatar.cc/50" alt="chat" />
-          <div>
-            <h3 id="chatName">Welcome</h3>
-            <div id="chatStatus" class="status">Offline</div>
-          </div>
-        </div>
-        <div class="header-actions">
-          <input id="attachFile" type="file" hidden />
-          <button id="btnAttach">📎</button>
-          <button id="btnGif">GIF</button>
-          <button id="btnCall">📞</button>
-          <button id="btnVideoCall">📹</button>
+    <main id="chat-area">
+      <header id="chatHeader">
+        <div id="chatWith">Select contact to chat</div>
+        <div id="statusLine"></div>
+        <div class="controls">
+          <button id="themeBtn">Theme</button>
         </div>
       </header>
 
-      <section id="messages" class="messages"></section>
+      <section id="messages" class="chat-box"></section>
 
-      <div class="typing-indicator"><span id="typingText"></span></div>
-
-      <footer class="composer">
-        <input id="msgInput" placeholder="Type a message" />
-        <button id="btnVoice">🎙️</button>
-        <button id="btnSend">➤</button>
-      </footer>
+      <div id="composer">
+        <input type="file" id="attachFile" />
+        <input id="msgInput" placeholder="Type a message..." />
+        <button id="sendBtn">Send</button>
+        <button id="voiceBtn">🎤</button>
+      </div>
+      <div id="typingIndicator"></div>
     </main>
-
-    <aside class="right-panel">
-      <h4>Chat Info</h4>
-      <div id="chatInfo"></div>
-      <button id="btnClear">Clear Chat</button>
-      <button id="btnExport">Export Chat</button>
-    </aside>
   </div>
 
-  <!-- Firebase compat for auth/db/storage (we use modular scripts in script.js via modules) -->
+  <audio id="notifySound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
   <script type="module" src="script.js"></script>
 </body>
 </html>
