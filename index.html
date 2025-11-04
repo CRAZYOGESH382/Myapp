@@ -1,35 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YogeshChat 💚</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chat App — Pro</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="chat-wrapper">
-    <header class="chat-header">
-      <div class="user-info">
-        <img id="profileImg" src="https://i.pravatar.cc/40?img=11" alt="User" />
+  <div class="app">
+    <aside class="left-panel">
+      <div class="profile-area">
+        <img id="myPhoto" src="https://i.pravatar.cc/80" alt="profile" />
         <div>
-          <h3 id="chatAppName">YogeshChat 💚</h3>
-          <p id="status" class="status">Online</p>
+          <input id="displayName" placeholder="Your name" />
+          <button id="saveProfile">Save</button>
         </div>
       </div>
-      <label class="upload-btn">
-        📷
-        <input type="file" id="uploadPhoto" accept="image/*" hidden />
-      </label>
-    </header>
 
-    <main id="messages" class="chat-body"></main>
+      <div class="contacts">
+        <div class="contacts-header">
+          <input id="searchUser" placeholder="Search users or add phone/email" />
+          <button id="createGroupBtn">+ Group</button>
+        </div>
+        <ul id="userList"></ul>
+      </div>
+    </aside>
 
-    <footer class="chat-footer">
-      <input type="text" id="messageInput" placeholder="Type a message..." />
-      <button id="sendBtn">➤</button>
-    </footer>
+    <main class="chat-panel">
+      <header class="chat-header">
+        <div class="chat-title">
+          <img id="chatPhoto" src="https://i.pravatar.cc/50" alt="chat" />
+          <div>
+            <h3 id="chatName">Welcome</h3>
+            <div id="chatStatus" class="status">Offline</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <input id="attachFile" type="file" hidden />
+          <button id="btnAttach">📎</button>
+          <button id="btnGif">GIF</button>
+          <button id="btnCall">📞</button>
+          <button id="btnVideoCall">📹</button>
+        </div>
+      </header>
+
+      <section id="messages" class="messages"></section>
+
+      <div class="typing-indicator"><span id="typingText"></span></div>
+
+      <footer class="composer">
+        <input id="msgInput" placeholder="Type a message" />
+        <button id="btnVoice">🎙️</button>
+        <button id="btnSend">➤</button>
+      </footer>
+    </main>
+
+    <aside class="right-panel">
+      <h4>Chat Info</h4>
+      <div id="chatInfo"></div>
+      <button id="btnClear">Clear Chat</button>
+      <button id="btnExport">Export Chat</button>
+    </aside>
   </div>
 
+  <!-- Firebase compat for auth/db/storage (we use modular scripts in script.js via modules) -->
   <script type="module" src="script.js"></script>
 </body>
 </html>
