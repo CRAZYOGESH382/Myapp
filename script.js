@@ -59,7 +59,7 @@ function showMessage(name, text, time) {
   const msgDiv = document.createElement("div");
   msgDiv.classList.add("message");
   msgDiv.classList.add(name === username ? "sent" : "received");
-  msgDiv.innerHTML = `<b>${name}</b><br>${text}<br><small>${time}</small>`;
+  msgDiv.innerHTML = `<b>${name}</b><br>${text}<small>${time}</small>`;
   messagesContainer.appendChild(msgDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
