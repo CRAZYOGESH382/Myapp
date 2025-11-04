@@ -1,4 +1,13 @@
-// Firebase config
+// Import Firebase SDKs
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  onChildAdded,
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+// ✅ Your Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyDS0qwZFuNE3fR7dDpTz_Sr7NrtqEgAorU",
   authDomain: "privetchatapp.firebaseapp.com",
@@ -11,76 +20,67 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-const loginDiv = document.getElementById("loginDiv");
-const chatDiv = document.getElementById("chatDiv");
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const sendBtn = document.getElementById("sendBtn");
+// ---------------------------
+// 👤 Get username (temporary)
+let username = localStorage.getItem("username");
+if (!username) {
+  username = prompt("अपना नाम डालो 👇");
+  localStorage.setItem("username", username || "User");
+}
+
+// ---------------------------
+// 🎯 Send message
 const messageInput = document.getElementById("messageInput");
-const messageBox = document.getElementById("messages");
-let userName = "";
+const sendBtn = document.getElementById("sendBtn");
+const messagesContainer = document.getElementById("messages");
 
-// Login / Signup
-loginBtn.addEventListener("click", async () => {
-  const name = document.getElementById("nameInput").value;
-  const email = document.getElementById("emailInput").value;
-  const password = document.getElementById("passwordInput").value;
-
-  if (!email || !password || !name) {
-    alert("कृपया सभी फील्ड भरें!");
-    return;
-  }
-
-  try {
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    await userCredential.user.updateProfile({ displayName: name });
-    userName = name;
-  } catch (error) {
-    // अगर यूज़र पहले से है तो login करो
-    try {
-      const userCredential = await auth.signInWithEmailAndPassword(email, password);
-      userName = userCredential.user.displayName || name;
-    } catch (err) {
-      alert("Login Error: " + err.message);
-      return;
-    }
-  }
-
-  loginDiv.classList.add("hidden");
-  chatDiv.classList.remove("hidden");
+sendBtn.addEventListener("click", sendMessage);
+messageInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
 });
 
-// Send message
-sendBtn.addEventListener("click", () => {
-  const message = messageInput.value.trim();
-  if (message === "") return;
+function sendMessage() {
+  const msg = messageInput.value.trim();
+  if (msg === "") return;
 
-  const timestamp = new Date().toLocaleTimeString();
-  db.ref("messages").push({
-    name: userName,
-    text: message,
-    time: timestamp
+  const msgRef = ref(db, "messages");
+  push(msgRef, {
+    name: username,
+    text: msg,
+    time: new Date().toLocaleTimeString(),
   });
+
   messageInput.value = "";
+}
+
+// ---------------------------
+// 📡 Receive message live
+const msgRef = ref(db, "messages");
+onChildAdded(msgRef, (snapshot) => {
+  const data = snapshot.val();
+  displayMessage(data.name, data.text, data.time);
 });
 
-// Show messages
-db.ref("messages").on("child_added", (snapshot) => {
-  const data = snapshot.val();
+// ---------------------------
+// 💬 Display message in UI
+function displayMessage(name, text, time) {
   const msgDiv = document.createElement("div");
   msgDiv.classList.add("message");
-  msgDiv.innerHTML = `<b>${data.name}</b>: ${data.text} <span>${data.time}</span>`;
-  messageBox.appendChild(msgDiv);
-  messageBox.scrollTop = messageBox.scrollHeight;
-});
+  msgDiv.classList.add(name === username ? "sent" : "received");
+  msgDiv.innerHTML = `<b>${name}</b>: ${text} <small>${time}</small>`;
+  messagesContainer.appendChild(msgDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
 
-// Logout
-logoutBtn.addEventListener("click", () => {
-  auth.signOut();
-  chatDiv.classList.add("hidden");
-  loginDiv.classList.remove("hidden");
-});
+// ---------------------------
+// 🟢 Optional Logout Feature
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    localStorage.removeItem("username");
+    location.reload();
+  });
+}
